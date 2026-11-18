@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Keyword Desk</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#EEF1EF; --surface:#FFFFFF; --sunk:#E3E8E5; --ink:#17232A; --muted:#5B6A70; --line:#CDD5D1;
+  --accent:#0D6A60; --accent-ink:#FFFFFF; --accent-soft:#D5EAE6; --warn:#9A5B0B; --warn-soft:#F7E8CF;
+  --danger:#A1312B; --danger-soft:#F6DCD9; --hl:#FFF0B8;
+  --sans:"Instrument Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --mono:"JetBrains Mono", ui-monospace, "SFMono-Regular", Consolas, monospace;
+  color-scheme:light;
+  box-sizing:border-box; padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){ :root:not([data-theme="light"]){
+  --bg:#121A1D; --surface:#1A2428; --sunk:#0E1517; --ink:#E4ECEA; --muted:#93A4A6; --line:#2C3A3E;
+  --accent:#4FB8A9; --accent-ink:#06201C; --accent-soft:#16352F; --warn:#E3A84E; --warn-soft:#3A2B12;
+  --danger:#EE8A82; --danger-soft:#3E1D1A; --hl:#4A4116; color-scheme:dark; } }
+:root[data-theme="dark"]{
+  --bg:#121A1D; --surface:#1A2428; --sunk:#0E1517; --ink:#E4ECEA; --muted:#93A4A6; --line:#2C3A3E;
+  --accent:#4FB8A9; --accent-ink:#06201C; --accent-soft:#16352F; --warn:#E3A84E; --warn-soft:#3A2B12;
+  --danger:#EE8A82; --danger-soft:#3E1D1A; --hl:#4A4116; color-scheme:dark; }
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 var(--sans);-webkit-font-smoothing:antialiased}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--surface)}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+img{max-width:100%}
+a{color:var(--accent)}
+.wrap{max-width:1120px;margin:0 auto;padding:0 20px}
+header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--surface);border-bottom:1px solid var(--line)}
+.top .wrap{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding-top:14px;padding-bottom:0}
+.brand{display:flex;align-items:baseline;gap:12px;flex:1;min-width:240px}
+.brand h1{font-size:20px;font-weight:700;letter-spacing:-.01em;margin:0}
+.brand .file{font-family:var(--mono);font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.role{font-size:13px;color:var(--muted);display:flex;align-items:center;gap:8px}
+.role b{color:var(--ink);font-weight:600}
+nav.tabs{display:flex;gap:4px;width:100%;overflow-x:auto;margin-top:10px}
+nav.tabs button{background:none;border:0;border-bottom:3px solid transparent;padding:8px 12px 9px;cursor:pointer;color:var(--muted);font-weight:500;white-space:nowrap}
+nav.tabs button[aria-current="page"]{color:var(--ink);border-bottom-color:var(--accent)}
+.count{display:inline-block;min-width:20px;padding:0 6px;margin-left:6px;border-radius:10px;background:var(--sunk);font-size:12px;text-align:center;color:var(--ink)}
+.count.hot{background:var(--accent);color:var(--accent-ink)}
+main{padding:24px 0 64px}
+h2{font-size:22px;letter-spacing:-.01em;margin:0 0 4px}
+.lede{color:var(--muted);margin:0 0 20px;max-width:68ch}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:20px}
+.stack>*+*{margin-top:16px}
+label.f{display:block;font-weight:600;font-size:14px;margin-bottom:6px}
+label.f small{font-weight:400;color:var(--muted)}
+input[type=text],input[type=password],select,textarea{width:100%;background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:9px 11px}
+textarea{resize:vertical;min-height:80px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media (max-width:720px){.grid2{grid-template-columns:1fr}}
+.btn{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--surface);padding:9px 16px;border-radius:6px;cursor:pointer;font-weight:600}
+.btn:hover{border-color:var(--muted)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.danger{color:var(--danger)}
+.btn.small{padding:5px 10px;font-size:13px}
+.btn[disabled]{opacity:.5;cursor:not-allowed}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.drop{border:2px dashed var(--line);border-radius:10px;padding:22px;text-align:center;cursor:pointer;background:var(--bg);color:var(--muted)}
+.drop.over{border-color:var(--accent);background:var(--accent-soft)}
+.drop img{max-height:240px;border-radius:6px;display:block;margin:0 auto 10px}
+.note{font-size:13px;color:var(--muted)}
+.alert{border-radius:6px;padding:10px 12px;font-size:14px}
+.alert.warn{background:var(--warn-soft);color:var(--warn)}
+.alert.err{background:var(--danger-soft);color:var(--danger)}
+.alert.ok{background:var(--accent-soft);color:var(--accent)}
+.path{font-family:var(--mono);font-size:13px}
+.path .sep{color:var(--muted);padding:0 4px}
+/* request cards */
+.req{display:grid;grid-template-columns:200px 1fr;gap:20px;padding:18px;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+.req+.req{margin-top:14px}
+@media (max-width:760px){.req{grid-template-columns:1fr}}
+.thumb{width:100%;aspect-ratio:1;object-fit:cover;border-radius:6px;background:var(--sunk);cursor:zoom-in;border:0;padding:0;display:block}
+.thumb.ph{display:grid;place-items:center;color:var(--muted);font-size:13px;cursor:default}
+.req h3{font-size:18px;margin:0}
+.meta{font-size:13px;color:var(--muted)}
+.picker{display:flex;flex-direction:column;gap:8px}
+.picker select{max-width:420px}
+/* the file preview: literal tab-indented lines */
+.filepeek{font-family:var(--mono);font-size:12.5px;line-height:1.7;background:var(--sunk);border-radius:6px;padding:10px 0;overflow-x:auto;white-space:pre}
+.filepeek div{padding:0 12px}
+.filepeek .new{background:var(--hl);font-weight:600}
+.filepeek .ln{display:inline-block;width:4.5ch;color:var(--muted);text-align:right;margin-right:12px;user-select:none}
+.filepeek .tab{color:var(--line)}
+table.list{width:100%;border-collapse:collapse;font-size:14px}
+table.list th{text-align:left;font-weight:600;color:var(--muted);font-size:13px;padding:8px 10px;border-bottom:1px solid var(--line)}
+table.list td{padding:10px;border-bottom:1px solid var(--line);vertical-align:top}
+.scrollx{overflow-x:auto}
+.status{font-size:12px;font-weight:600;padding:2px 8px;border-radius:10px;white-space:nowrap}
+.st-pending{background:var(--warn-soft);color:var(--warn)}
+.st-approved{background:var(--accent-soft);color:var(--accent)}
+.st-released{background:var(--accent);color:var(--accent-ink)}
+.st-rejected{background:var(--danger-soft);color:var(--danger)}
+.empty{text-align:center;padding:40px 20px;color:var(--muted)}
+.rel{display:grid;grid-template-columns:1fr auto;gap:12px;padding:16px 0;border-bottom:1px solid var(--line)}
+.rel:first-child{padding-top:0}
+.rel .fn{font-family:var(--mono);font-size:14px;font-weight:600;word-break:break-all}
+.newtag{font-size:11px;font-weight:700;background:var(--accent);color:var(--accent-ink);border-radius:4px;padding:1px 6px;margin-left:8px;vertical-align:2px}
+.cols{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:860px){.cols{grid-template-columns:1fr}}
+.catgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px}
+.cat{border:1px solid var(--line);border-radius:8px;padding:10px 12px;background:var(--surface)}
+.cat b{display:block;font-size:14px}
+.cat span{font-size:13px;color:var(--muted)}
+dialog{border:0;border-radius:10px;padding:0;max-width:min(92vw,1100px);background:var(--surface);color:var(--ink)}
+dialog::backdrop{background:rgba(0,0,0,.6)}
+dialog img{display:block;max-height:82vh}
+dialog .bar{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;font-size:13px;color:var(--muted)}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:8px;font-size:14px;z-index:20;max-width:90vw}
+.hidden{display:none!important}
+.chip{display:inline-flex;align-items:center;gap:6px;background:var(--sunk);border-radius:14px;padding:3px 10px;font-size:13px;margin:2px 4px 2px 0}
+@media (prefers-reduced-motion:no-preference){.flash{animation:fl 1.2s ease-out}@keyframes fl{from{background:var(--hl)}to{background:transparent}}}
+</style>
+</head>
+<body>
+<header class="top"><div class="wrap">
+  <div class="brand"><h1>Keyword Desk</h1><span class="file" id="curfile"></span></div>
+  <div class="role" id="role"></div>
+  <nav class="tabs" id="tabs" aria-label="Sections"></nav>
+</div></header>
+<main><div class="wrap" id="main"><p class="empty">Loading…</p></div></main>
+<dialog id="zoom"><div class="bar"><span id="zoomcap"></span><button class="btn small" id="zoomclose">Close</button></div><img id="zoomimg" alt=""></dialog>
+<script>
+// ---- keyword file model: flat list of lines, tab-indented ----
+const NUM_RE = /^\d{2}\s/;
+function parseFile(text){
+  const trailing = /\r?\n$/.test(text);
+  const body = trailing ? text.replace(/\r?\n$/, '') : text;
+  const lines = body.split(/\r?\n/).map(raw => {
+    const tabs = raw.match(/^\t*/)[0].length;
+    const name = raw.slice(tabs).trim();
+    return { raw, depth: name ? tabs : -1, name };
+  });
+  return { lines, trailing };
+}
+function serializeFile(f){ return f.lines.map(l => l.raw).join('\n') + (f.trailing ? '\n' : ''); }
+const norm = s => s.trim().replace(/\s+/g,' ').toLowerCase();
+function subtreeEnd(lines, idx){
+  const d = idx < 0 ? -1 : lines[idx].depth;
+  let i = idx + 1;
+  while (i < lines.length && (lines[i].depth === -1 || lines[i].depth > d)) i++;
+  return i;
+}
+function childIdx(lines, idx){
+  const d = idx < 0 ? 0 : lines[idx].depth + 1, end = subtreeEnd(lines, idx), out = [];
+  for (let i = idx + 1; i < end; i++) if (lines[i].depth === d) out.push(i);
+  return out;
+}
+function findPath(lines, path){
+  let idx = -1;
+  for (const name of path){
+    const hit = childIdx(lines, idx).find(i => norm(lines[i].name) === norm(name));
+    if (hit === undefined) return null;
+    idx = hit;
+  }
+  return idx;
+}
+function insertChild(f, parentPath, name){
+  const lines = f.lines, p = findPath(lines, parentPath);
+  if (p === null) throw new Error('Parent not found: ' + parentPath.join(' > '));
+  const kids = childIdx(lines, p);
+  const existing = kids.find(i => norm(lines[i].name) === norm(name));
+  if (existing !== undefined) return { index: existing, added: false };
+  const depth = p < 0 ? 0 : lines[p].depth + 1;
+  let pos = null;
+  const isNum = NUM_RE.test(name);
+  for (const i of kids){
+    const sib = lines[i].name, sibNum = NUM_RE.test(sib);
+    if (isNum ? (sibNum && sib.localeCompare(name, undefined, {numeric:true}) > 0) || !sibNum
+              : (!sibNum && sib.localeCompare(name, undefined, {sensitivity:'base'}) > 0)){ pos = i; break; }
+  }
+  if (pos === null){ pos = subtreeEnd(lines, p); while (pos > p + 1 && lines[pos-1].depth === -1) pos--; }
+  lines.splice(pos, 0, { raw: '\t'.repeat(depth) + name, depth, name });
+  return { index: pos, added: true };
+}
+function pathOf(lines, idx){
+  const out = []; let d = lines[idx].depth;
+  out.unshift(lines[idx].name);
+  for (let i = idx - 1; i >= 0 && d > 0; i--) if (lines[i].depth !== -1 && lines[i].depth < d){ out.unshift(lines[i].name); d = lines[i].depth; }
+  return out;
+}
+function categories(lines){ return lines.map((l,i)=>({l,i})).filter(x => x.l.depth === 0 && NUM_RE.test(x.l.name)).map(x => x.l.name); }
+// apply additions: [{parent:[..], newSub, keyword}]
+function applyAdditions(text, adds){
+  const f = parseFile(text); const placed = [];
+  for (const a of adds){
+    let parent = a.parent.slice();
+    if (a.newSub){ insertChild(f, parent, a.newSub); parent.push(a.newSub); }
+    const r = insertChild(f, parent, a.keyword);
+    placed.push({ ...a, path: pathOf(f.lines, r.index), index: r.index, added: r.added });
+  }
+  // recompute indexes after all inserts
+  for (const p of placed){ const i = findPath(f.lines, p.path); p.index = i; }
+  return { file: f, text: serializeFile(f), placed };
+}
+if (typeof module !== 'undefined') module.exports = { parseFile, serializeFile, insertChild, findPath, childIdx, pathOf, categories, applyAdditions, norm, NUM_RE, subtreeEnd };
+// ================= helpers =================
+const $ = (s, el = document) => el.querySelector(s);
+function h(tag, attrs, ...kids){
+  const el = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})){
+    if (v === false || v == null) continue;
+    if (k.startsWith('on')) el.addEventListener(k.slice(2), v);
+    else if (k === 'class') el.className = v;
+    else if (k === 'value') el.value = v;
+    else if (k === 'checked' || k === 'disabled' || k === 'selected') el[k] = !!v;
+    else el.setAttribute(k, v === true ? '' : v);
+  }
+  for (const k of kids.flat(Infinity)){ if (k == null || k === false) continue; el.append(k instanceof Node ? k : document.createTextNode(String(k))); }
+  return el;
+}
+const fmtSize = b => b >= 1048576 ? (b/1048576).toFixed(2) + ' MB' : Math.round(b/1024) + ' KB';
+const fmtDate = t => t ? new Date(t).toLocaleString(undefined, {day:'numeric', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit'}) : '';
+function toast(msg){ const t = h('div', {class:'toast', role:'status'}, msg); document.body.append(t); setTimeout(() => t.remove(), 3600); }
+function pathEl(parts){ return h('span', {class:'path'}, parts.map((p, i) => [i ? h('span', {class:'sep'}, '>') : null, p])); }
+const joinPath = parts => parts.join(' > ');
+function hijriToday(offset){
+  try{
+    const d = new Date(Date.now() + (offset || 0) * 86400000);
+    const parts = new Intl.DateTimeFormat('en-u-ca-islamic-tbla-nu-latn', {year:'numeric', month:'2-digit', day:'2-digit'}).formatToParts(d);
+    const g = t => parts.find(p => p.type === t).value;
+    const y = g('year').replace(/\D/g, '');
+    if (y.length === 4) return `${y}-${g('month')}-${g('day')}`;
+  }catch(e){}
+  return new Date().toISOString().slice(0, 10);
+}
+function parseFilename(fn){
+  const m = /^(\d{4}-\d{2}-\d{2})_+(.+?)_V(\d+(?:[_.]\d+)*)\.txt$/i.exec(fn || '');
+  return m ? { date: m[1], base: m[2], version: m[3].replace(/_/g, '.') } : null;
+}
+const buildFilename = (date, base, version) => `${date}__${base}_V${version.replace(/\./g, '_')}.txt`;
+function bumpVersion(v){ const p = (v || '1.0.0').split('.').map(n => parseInt(n, 10) || 0); p[p.length - 1]++; return p.join('.'); }
+function safeLS(fn){ try { return fn(localStorage); } catch(e){ return null; } }
+const slug = s => (s.replace(/[^A-Za-z0-9]+/g, '-').replace(/^-|-$/g, '').toLowerCase().slice(0, 50) || 'keyword');
+function bytesToB64(bytes){ let s = ''; for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000)); return btoa(s); }
+const textToB64 = t => bytesToB64(new TextEncoder().encode(t));
+const b64ToText = b => new TextDecoder().decode(Uint8Array.from(atob(b.replace(/\s/g, '')), c => c.charCodeAt(0)));
+function localDownload(filename, text){
+  const url = URL.createObjectURL(new Blob([text], {type:'text/plain;charset=utf-8'}));
+  const a = h('a', {href:url, download:filename}); document.body.append(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
+}
+
+// ================= GitHub API =================
+const DEFAULT_REPO = 'husainpanvelwala-pixel/Brigde-Keywords';
+const API = 'https://api.github.com';
+const encPath = p => p.split('/').map(encodeURIComponent).join('/');
+async function gh(path, {method = 'GET', body, accept, raw} = {}){
+  const res = await fetch(API + path, { method, cache:'no-store',
+    headers: { Authorization: 'Bearer ' + S.token, Accept: accept || 'application/vnd.github+json', 'X-GitHub-Api-Version':'2022-11-28', ...(body ? {'Content-Type':'application/json'} : {}) },
+    body: body ? JSON.stringify(body) : undefined });
+  if (!res.ok){
+    let msg = res.statusText; try { msg = (await res.json()).message || msg; } catch(e){}
+    const err = new Error(`${res.status} ${msg}`); err.status = res.status; throw err;
+  }
+  if (raw === 'blob') return res.blob();
+  if (raw === 'text') return res.text();
+  return res.status === 204 ? null : res.json();
+}
+const R = () => '/repos/' + S.repo;
+async function getFile(path){
+  try { const j = await gh(`${R()}/contents/${encPath(path)}`); return { text: j.content ? b64ToText(j.content) : await gh(`${R()}/contents/${encPath(path)}`, {accept:'application/vnd.github.raw+json', raw:'text'}), sha: j.sha }; }
+  catch(e){ if (e.status === 404) return null; throw e; }
+}
+async function putFile(path, b64, message, sha){
+  const r = await gh(`${R()}/contents/${encPath(path)}`, {method:'PUT', body:{ message, content:b64, ...(sha ? {sha} : {}) }});
+  return r.content.sha;
+}
+async function putText(path, text, message){
+  const cur = await getFile(path);
+  if (cur && cur.text === text) return cur.sha;
+  return putFile(path, textToB64(text), message, cur && cur.sha);
+}
+
+// request = GitHub issue labelled keyword-request; data lives in hidden markers in the body
+const META_RE = /<!-- kwdesk (\{[\s\S]*?\}) -->/;
+const DEC_RE = /\n*<!-- kwdesk-decision (\{[\s\S]*?\}) -->/;
+const enc = o => JSON.stringify(o).replace(/>/g, '\\u003e');
+function issueToReq(i){
+  let meta = {}, dec = null;
+  try { const m = META_RE.exec(i.body || ''); if (m) meta = JSON.parse(m[1]); } catch(e){}
+  try { const m = DEC_RE.exec(i.body || ''); if (m) dec = JSON.parse(m[1]); } catch(e){}
+  const labels = (i.labels || []).map(l => typeof l === 'string' ? l : l.name);
+  const status = labels.includes('released') ? 'released' : labels.includes('rejected') ? 'rejected' : labels.includes('approved') ? 'approved' : 'pending';
+  return { id: i.number, number: i.number, url: i.html_url, body: i.body || '', keyword: meta.keyword || i.title.replace(/^Keyword:\s*/i, ''),
+    cat: meta.cat || '', sub: meta.sub || '', note: meta.note || '', image: meta.image || null, imageSize: meta.imageSize || 0, direct: !!meta.direct,
+    requester: i.user && i.user.login, createdAt: Date.parse(i.created_at), status, dec,
+    placement: dec && dec.parent ? { parent: dec.parent, newSub: dec.newSub || null } : null,
+    finalKeyword: dec && dec.keyword, decidedAt: dec && dec.at, rejectReason: dec && dec.reason, releasedAs: dec && dec.releasedAs };
+}
+async function loadIssues(){
+  const out = [];
+  for (let page = 1; page <= 5; page++){
+    const batch = await gh(`${R()}/issues?labels=keyword-request&state=all&per_page=100&page=${page}`);
+    out.push(...batch.filter(i => !i.pull_request));
+    if (batch.length < 100) break;
+  }
+  S.requests = out.map(issueToReq);
+}
+async function setDecision(r, dec, labels, state, reason){
+  const body = r.body.replace(DEC_RE, '') + (dec ? `\n\n<!-- kwdesk-decision ${enc(dec)} -->` : '');
+  await gh(`${R()}/issues/${r.number}`, {method:'PATCH', body:{ body, labels:['keyword-request', ...labels], state, ...(reason ? {state_reason: reason} : {}) }});
+}
+
+// ================= state =================
+const S = {
+  token: safeLS(ls => ls.getItem('kd-token')) || '', repo: safeLS(ls => ls.getItem('kd-repo')) || DEFAULT_REPO,
+  me: null, isApprover: false, previewRequester: false, view: null,
+  master: null, meta: {}, config: {}, releases: [], requests: [], imgCache: {}, loaded: false, loadError: null,
+  draft: { keyword:'', cat:'', subHint:'', note:'', img:null, busy:false, msg:null },
+  decide: {}, rel: null, direct: null, search: '', busy: false,
+};
+const role = () => (S.isApprover && !S.previewRequester) ? 'approver' : 'requester';
+
+async function loadAll(){
+  const [cur, meta, cfg, rels] = await Promise.all([getFile('current.txt'), getFile('release.json'), getFile('keyword-config.json'), getFile('releases.json')]);
+  S.master = cur ? { text: cur.text, sha: cur.sha } : null;
+  try { S.meta = meta ? JSON.parse(meta.text) : {}; } catch(e){ S.meta = {}; }
+  try { S.config = cfg ? JSON.parse(cfg.text) : {}; } catch(e){ S.config = {}; }
+  try { S.releases = rels ? JSON.parse(rels.text) : []; } catch(e){ S.releases = []; }
+  if (S.master) S.master.filename = S.meta.filename || 'current.txt';
+  await loadIssues();
+  S.loaded = true;
+}
+async function refresh(quiet){
+  try { await loadAll(); S.loadError = null; } catch(e){ S.loadError = e.message; if (!quiet) toast('Couldn’t refresh: ' + e.message); }
+  render();
+}
+
+// ================= render scheduling =================
+let pendingRender = false;
+function render(force){
+  const ae = document.activeElement;
+  if (!force && ae && $('#main').contains(ae) && /INPUT|TEXTAREA|SELECT/.test(ae.tagName) && ae.type !== 'file'){ pendingRender = true; return; }
+  pendingRender = false;
+  renderChrome();
+  const main = $('#main'); main.replaceChildren();
+  if (!S.me) return viewLogin(main);
+  if (!S.loaded) { main.append(h('p', {class:'empty'}, S.loadError ? 'Couldn’t load: ' + S.loadError : 'Loading…')); return; }
+  const views = role() === 'approver'
+    ? { requests: viewApprove, release: viewRelease, list: viewList, history: viewHistory }
+    : { request: viewRequestForm, mine: viewMine, downloads: viewHistory };
+  (views[S.view] || Object.values(views)[0])(main);
+}
+document.addEventListener('focusout', () => setTimeout(() => { if (pendingRender) render(); }, 0));
+
+function renderChrome(){
+  $('#curfile').textContent = S.master ? `Current list: ${S.master.filename}` : '';
+  const r = $('#role'); r.replaceChildren();
+  const nav = $('#tabs'); nav.replaceChildren();
+  if (!S.me) return;
+  r.append(h('span', null, h('b', null, S.me), S.isApprover ? (S.previewRequester ? ' (approver, previewing requester view)' : ' (approver)') : ' (requester)'));
+  if (S.isApprover) r.append(h('button', {class:'btn small', onclick(){ S.previewRequester = !S.previewRequester; S.view = null; render(true); }}, S.previewRequester ? 'Back to approver view' : 'Preview requester view'));
+  r.append(h('button', {class:'btn small', onclick(){ refresh(); }}, 'Refresh'), h('button', {class:'btn small', onclick: signOut}, 'Sign out'));
+  const pend = S.requests.filter(x => x.status === 'pending').length;
+  const staged = S.requests.filter(x => x.status === 'approved').length;
+  const unseen = S.releases.length && S.releases[0].filename !== safeLS(ls => ls.getItem('kd-seen'));
+  const tabs = role() === 'approver'
+    ? [['requests', 'Requests', pend, pend > 0], ['release', 'Export & release', staged, staged > 0], ['list', 'Keyword list'], ['history', 'Released files', S.releases.length]]
+    : [['request', 'Request a keyword'], ['mine', 'My requests', S.requests.filter(x => x.requester === S.me).length], ['downloads', 'Download list', unseen ? 'new' : null, unseen]];
+  if (!tabs.some(t => t[0] === S.view)) S.view = tabs[0][0];
+  nav.replaceChildren(...tabs.map(([id, label, c, hot]) =>
+    h('button', {'aria-current': S.view === id ? 'page' : false, onclick(){ S.view = id; render(true); window.scrollTo(0, 0); }}, label, c != null && c !== 0 ? h('span', {class:'count' + (hot ? ' hot' : '')}, c) : null)));
+}
+
+// ================= sign in =================
+function viewLogin(main){
+  const st = { token: S.token, repo: S.repo, busy: false, err: null };
+  const errBox = h('div');
+  const btn = h('button', {class:'btn primary', async onclick(){
+    errBox.replaceChildren(); btn.disabled = true; btn.textContent = 'Signing in…';
+    try { await signIn(st.token.trim(), st.repo.trim()); }
+    catch(e){ errBox.append(h('div', {class:'alert err'}, e.message)); btn.disabled = false; btn.textContent = 'Sign in'; }
+  }}, 'Sign in');
+  main.append(h('div', {style:'max-width:560px;margin:24px auto'},
+    h('h2', null, 'Sign in'),
+    h('p', {class:'lede'}, 'Keyword Desk keeps everything in your GitHub repository. Sign in once with a GitHub access token; it stays saved in this browser.'),
+    h('div', {class:'panel stack'},
+      h('div', null, h('label', {class:'f', for:'tk'}, 'GitHub access token'),
+        h('input', {type:'password', id:'tk', value:st.token, placeholder:'ghp_…', autocomplete:'off', oninput(e){ st.token = e.target.value; }, onkeydown(e){ if (e.key === 'Enter') btn.click(); }}),
+        h('p', {class:'note'}, 'Don’t have one? ', h('a', {href:'https://github.com/settings/tokens/new?scopes=repo&description=Keyword%20Desk', target:'_blank', rel:'noopener'}, 'Create a token on GitHub'),
+          '. Tick the “repo” box, choose an expiry date, click “Generate token”, and paste it here.')),
+      h('div', null, h('label', {class:'f', for:'rp'}, 'Repository'), h('input', {type:'text', id:'rp', value:st.repo, oninput(e){ st.repo = e.target.value; }})),
+      errBox, h('div', {class:'row'}, btn))));
+}
+async function signIn(token, repo){
+  if (!token) throw new Error('Paste your GitHub access token.');
+  if (!/^[\w.-]+\/[\w.-]+$/.test(repo)) throw new Error('Repository should look like owner/name.');
+  S.token = token; S.repo = repo;
+  let user, info;
+  try { user = await gh('/user'); }
+  catch(e){ throw new Error(e.status === 401 ? 'GitHub didn’t accept that token. Check you copied all of it and that it hasn’t expired.' : 'Couldn’t reach GitHub: ' + e.message); }
+  try { info = await gh(R()); }
+  catch(e){ throw new Error(e.status === 404 ? `Can’t see ${repo}. Ask the owner to add “${user.login}” as a collaborator, accept the email invitation, and check the token has the “repo” box ticked.` : e.message); }
+  if (!info.permissions || !info.permissions.push) throw new Error('Your account can view this repository but can’t add to it. Ask the owner for write access.');
+  safeLS(ls => { ls.setItem('kd-token', token); ls.setItem('kd-repo', repo); });
+  S.me = user.login; S.loaded = false; render(true);
+  await loadAll();
+  const approvers = (S.config.approvers || []).map(a => a.toLowerCase());
+  S.isApprover = approvers.length ? approvers.includes(S.me.toLowerCase()) : !!info.permissions.admin;
+  render(true);
+}
+function signOut(){ safeLS(ls => ls.removeItem('kd-token')); Object.assign(S, { token:'', me:null, loaded:false, requests:[], releases:[], master:null, view:null, rel:null, decide:{} }); render(true); }
+
+// ================= image handling =================
+async function loadBitmap(file){
+  try { return await createImageBitmap(file, {imageOrientation:'from-image'}); }
+  catch(e){ const url = URL.createObjectURL(file); try { const img = new Image(); img.src = url; await img.decode(); return img; } finally { setTimeout(() => URL.revokeObjectURL(url), 1000); } }
+}
+async function compressImage(file){
+  const MAX = (S.config.max_image_bytes || 1048576);
+  let bmp;
+  try { bmp = await loadBitmap(file); }
+  catch(e){ throw new Error('This image format can’t be read here. Export it as JPEG or PNG and try again.'); }
+  const W = bmp.width, H = bmp.height;
+  if (file.size <= MAX && /^image\/(jpeg|png|webp|gif)$/.test(file.type)) return { blob: file, w: W, h: H, orig: file.size, changed: false };
+  let scale = Math.min(1, (S.config.max_image_side || 4000) / Math.max(W, H)), q = 0.9, blob = null, w, hh;
+  const c = document.createElement('canvas'), ctx = c.getContext('2d');
+  for (let i = 0; i < 24; i++){
+    w = Math.max(1, Math.round(W * scale)); hh = Math.max(1, Math.round(H * scale));
+    c.width = w; c.height = hh; ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, w, hh); ctx.drawImage(bmp, 0, 0, w, hh);
+    blob = await new Promise(r => c.toBlob(r, 'image/jpeg', q));
+    if (blob && blob.size <= MAX) break;
+    if (q > 0.72) q -= 0.06; else scale *= 0.85;
+  }
+  if (!blob || blob.size > MAX) throw new Error('Couldn’t bring this image under 1 MB.');
+  return { blob, w, h: hh, orig: file.size, changed: true };
+}
+async function imageURL(req){
+  if (!req.image) return null;
+  if (!S.imgCache[req.image]) S.imgCache[req.image] = gh(`${R()}/contents/${encPath(req.image)}`, {accept:'application/vnd.github.raw+json', raw:'blob'}).then(b => URL.createObjectURL(b));
+  return S.imgCache[req.image];
+}
+function thumbFor(req){
+  if (!req.image) return h('div', {class:'thumb ph'}, req.direct ? 'Added by approver' : 'No image');
+  const btn = h('button', {class:'thumb', 'aria-label':'Enlarge reference image for ' + req.keyword});
+  btn.style.backgroundSize = 'cover'; btn.style.backgroundPosition = 'center';
+  imageURL(req).then(u => { btn.style.backgroundImage = `url("${u}")`; btn.onclick = () => zoom(u, req.keyword); }).catch(() => { btn.textContent = 'Image unavailable'; });
+  return btn;
+}
+function zoom(url, cap){ $('#zoomimg').src = url; $('#zoomcap').textContent = cap; $('#zoom').showModal(); }
+$('#zoomclose').onclick = () => $('#zoom').close();
+$('#zoom').addEventListener('click', e => { if (e.target.id === 'zoom') $('#zoom').close(); });
+
+// ================= keyword helpers =================
+let parsedCache = { text: null, file: null };
+function masterFile(){
+  const t = S.master && S.master.text; if (!t) return null;
+  if (parsedCache.text !== t) parsedCache = { text: t, file: parseFile(t) };
+  return parsedCache.file;
+}
+function cats(){ const f = masterFile(); return f ? categories(f.lines) : []; }
+function existingPaths(keyword){
+  const f = masterFile(); if (!f || !keyword.trim()) return [];
+  const k = norm(keyword);
+  return f.lines.map((l, i) => l.depth >= 0 && norm(l.name) === k ? pathOf(f.lines, i) : null).filter(Boolean);
+}
+function stagedAdditions(exceptId){
+  return S.requests.filter(r => r.status === 'approved' && r.id !== exceptId && r.placement)
+    .sort((a, b) => (a.decidedAt || 0) - (b.decidedAt || 0))
+    .map(r => ({ id: r.id, parent: r.placement.parent, newSub: r.placement.newSub || null, keyword: r.finalKeyword || r.keyword }));
+}
+function childrenOf(path){
+  const f = masterFile(); if (!f) return [];
+  const idx = findPath(f.lines, path); if (idx === null) return [];
+  return childIdx(f.lines, idx).map(i => ({ name: f.lines[i].name, kids: childIdx(f.lines, i).length }));
+}
+function placementPicker(st, onChange){
+  const box = h('div', {class:'picker'});
+  const draw = () => {
+    box.replaceChildren();
+    box.append(h('select', {'aria-label':'Main category', onchange(e){ st.parent = e.target.value ? [e.target.value] : []; st.addSub = false; st.newSub = ''; draw(); onChange(); }},
+      h('option', {value:''}, 'Choose a main category…'), cats().map(n => h('option', {value:n, selected: st.parent[0] === n}, n))));
+    for (let lvl = 1; lvl <= st.parent.length && st.parent.length && lvl <= 3; lvl++){
+      const base = st.parent.slice(0, lvl), kids = childrenOf(base);
+      const groups = kids.filter(k => k.kids > 0), leaves = kids.filter(k => !k.kids);
+      const cur = st.addSub && lvl === st.parent.length ? '__new' : (st.parent[lvl] || '');
+      box.append(h('select', {'aria-label':'Subcategory level ' + lvl, onchange(e){
+          const v = e.target.value; st.parent = base.slice(); st.addSub = false;
+          if (v === '__new') st.addSub = true; else if (v) st.parent.push(v);
+          draw(); onChange();
+        }},
+        h('option', {value:''}, `Place directly under “${base[base.length - 1]}”`),
+        groups.length ? h('optgroup', {label:'Subcategories'}, groups.map(k => h('option', {value:k.name, selected: cur === k.name}, `${k.name} (${k.kids})`))) : null,
+        leaves.length && lvl > 1 ? h('optgroup', {label:'Make an existing keyword a subcategory'}, leaves.map(k => h('option', {value:k.name, selected: cur === k.name}, k.name))) : null,
+        h('option', {value:'__new', selected: cur === '__new'}, '+ New subcategory…')));
+      if (st.addSub && lvl === st.parent.length){
+        box.append(h('input', {type:'text', placeholder:'New subcategory name', value: st.newSub || '', 'aria-label':'New subcategory name', oninput(e){ st.newSub = e.target.value; onChange(); }}));
+        break;
+      }
+      if (!st.parent[lvl]) break;
+    }
+  };
+  draw(); return box;
+}
+function finalPath(st, keyword){ return [...st.parent, ...(st.addSub && st.newSub.trim() ? [st.newSub.trim()] : []), keyword.trim()]; }
+function filePeek(st, keyword, exceptId){
+  const box = h('div', {class:'filepeek', 'aria-label':'Where this lands in the text file'});
+  if (!st.parent.length || !keyword.trim() || (st.addSub && !st.newSub.trim())){ box.append(h('div', null, h('span', {class:'note'}, 'Pick a category to see where it lands in the file.'))); return box; }
+  try{
+    const adds = stagedAdditions(exceptId).concat([{ parent: st.parent, newSub: st.addSub ? st.newSub.trim() : null, keyword: keyword.trim() }]);
+    const res = applyAdditions(S.master.text, adds);
+    const mine = res.placed[res.placed.length - 1], L = res.file.lines;
+    const newSet = new Set(res.placed.filter(p => p.added).map(p => p.index));
+    if (st.addSub){ const si = findPath(L, [...st.parent, st.newSub.trim()]); if (si !== null) newSet.add(si); }
+    for (let i = Math.max(0, mine.index - 4); i <= Math.min(L.length - 1, mine.index + 4); i++){
+      const l = L[i], tabs = l.raw.match(/^\t*/)[0].length;
+      box.append(h('div', {class: i === mine.index || newSet.has(i) ? 'new' : ''}, h('span', {class:'ln'}, i + 1), h('span', {class:'tab'}, '→   '.repeat(tabs)), l.raw.slice(tabs)));
+    }
+    if (!mine.added) box.prepend(h('div', null, h('span', {style:'color:var(--warn)'}, 'Already exists here: nothing new would be added.')));
+  }catch(e){ box.append(h('div', null, 'Couldn’t place it: ' + e.message)); }
+  return box;
+}
+
+// ================= requester: new request =================
+let pasteHandler = null;
+document.addEventListener('paste', e => pasteHandler && pasteHandler(e));
+function viewRequestForm(main){
+  const d = S.draft, c = cats();
+  main.append(h('h2', null, 'Request a new keyword'),
+    h('p', {class:'lede'}, 'Add the keyword you need and a reference image that shows it. The image is reduced to 1 MB or less before it’s sent. The approver decides where it goes in the list.'));
+  const dupBox = h('div');
+  const updateDup = () => {
+    dupBox.replaceChildren();
+    const ex = existingPaths(d.keyword);
+    const pend = S.requests.filter(r => r.status === 'pending' && d.keyword.trim() && norm(r.keyword) === norm(d.keyword));
+    if (ex.length) dupBox.append(h('div', {class:'alert warn'}, 'Already in the list: ', ex.map(joinPath).join('; '), '. You can still send it if this is a different meaning.'));
+    else if (pend.length) dupBox.append(h('div', {class:'alert warn'}, 'Someone has already requested this keyword and it’s waiting for review.'));
+  };
+  const imgArea = h('div');
+  const fileIn = h('input', {type:'file', accept:'image/*', class:'hidden', onchange(e){ if (e.target.files[0]) takeFile(e.target.files[0]); e.target.value = ''; }});
+  const drawImg = () => {
+    imgArea.replaceChildren();
+    const drop = h('div', {class:'drop', tabindex:0, role:'button', 'aria-label':'Choose reference image',
+      onclick(){ fileIn.click(); }, onkeydown(e){ if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); fileIn.click(); } },
+      ondragover(e){ e.preventDefault(); drop.classList.add('over'); }, ondragleave(){ drop.classList.remove('over'); },
+      ondrop(e){ e.preventDefault(); drop.classList.remove('over'); const f = e.dataTransfer.files[0]; if (f) takeFile(f); }});
+    if (d.img && d.img.processing) drop.append('Reducing image…');
+    else if (d.img && d.img.url){
+      drop.append(h('img', {src: d.img.url, alt:'Reference image preview'}),
+        h('div', {class:'note'}, d.img.changed ? `Reduced from ${fmtSize(d.img.orig)} to ${fmtSize(d.img.blob.size)}, ${d.img.w}×${d.img.h}px` : `${fmtSize(d.img.blob.size)}, ${d.img.w}×${d.img.h}px (already under 1 MB)`),
+        h('div', {class:'note'}, 'Click to replace'));
+    } else drop.append(h('div', {style:'font-weight:600;color:var(--ink)'}, 'Drop an image here, paste it, or click to choose'), h('div', {class:'note'}, 'JPEG, PNG or WebP. Larger images are reduced to 1 MB automatically.'));
+    if (d.img && d.img.error) imgArea.append(h('div', {class:'alert err', style:'margin-bottom:8px'}, d.img.error));
+    imgArea.append(drop, fileIn);
+  };
+  async function takeFile(f){
+    if (!f.type.startsWith('image/')){ d.img = { error:'That file isn’t an image.' }; drawImg(); return; }
+    d.img = { processing: true }; drawImg();
+    try { const r = await compressImage(f); r.url = URL.createObjectURL(r.blob); d.img = r; } catch(e){ d.img = { error: e.message }; }
+    drawImg();
+  }
+  pasteHandler = e => { if (S.view !== 'request' || role() !== 'requester') return; const it = [...(e.clipboardData?.items || [])].find(i => i.type.startsWith('image/')); if (it){ e.preventDefault(); takeFile(it.getAsFile()); } };
+  drawImg(); updateDup();
+  const msgBox = h('div'); if (d.msg) msgBox.append(h('div', {class:'alert ' + d.msg.kind}, d.msg.text));
+  main.append(h('div', {class:'panel stack'},
+    h('div', null, h('label', {class:'f', for:'kw'}, 'Keyword'), h('input', {type:'text', id:'kw', value:d.keyword, placeholder:'e.g. Kangaroo', autocomplete:'off', oninput(e){ d.keyword = e.target.value; updateDup(); }}), dupBox),
+    h('div', null, h('label', {class:'f'}, 'Reference image ', h('small', null, '(required)')), imgArea),
+    h('div', {class:'grid2'},
+      h('div', null, h('label', {class:'f', for:'sc'}, 'Suggested category ', h('small', null, '(optional)')),
+        h('select', {id:'sc', onchange(e){ d.cat = e.target.value; }}, h('option', {value:''}, 'Not sure'), c.map(n => h('option', {value:n, selected: d.cat === n}, n)))),
+      h('div', null, h('label', {class:'f', for:'ss'}, 'Suggested subcategory ', h('small', null, '(optional)')), h('input', {type:'text', id:'ss', value:d.subHint, placeholder:'e.g. Animal', oninput(e){ d.subHint = e.target.value; }}))),
+    h('div', null, h('label', {class:'f', for:'nt'}, 'Note for the approver ', h('small', null, '(optional)')), h('textarea', {id:'nt', rows:3, placeholder:'Spelling, alternate names, where the photo was taken…', oninput(e){ d.note = e.target.value; }}, d.note)),
+    msgBox,
+    h('div', {class:'row'}, h('button', {class:'btn primary', disabled: d.busy, onclick: submitRequest}, d.busy ? 'Sending…' : 'Send request'))));
+}
+async function submitRequest(){
+  const d = S.draft;
+  const fail = text => { d.busy = false; d.msg = { kind:'err', text }; render(true); };
+  if (!d.keyword.trim()) return fail('Enter the keyword you want added.');
+  if (!d.img || !d.img.blob) return fail('Add a reference image. It’s required for every request.');
+  d.busy = true; d.msg = null; render(true);
+  try{
+    const kw = d.keyword.trim();
+    const stamp = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14);
+    const path = `reference-images/${stamp}-${slug(kw)}.jpg`;
+    const bytes = new Uint8Array(await d.img.blob.arrayBuffer());
+    await putFile(path, bytesToB64(bytes), `Reference image: ${kw}`);
+    const meta = { v:1, keyword: kw, cat: d.cat, sub: d.subHint.trim(), note: d.note.trim(), image: path, imageSize: bytes.length };
+    const body = [`**Keyword:** ${kw}`, `**Suggested category:** ${d.cat || 'Not sure'}`, d.subHint.trim() ? `**Suggested subcategory:** ${d.subHint.trim()}` : null,
+      d.note.trim() ? `**Note:** ${d.note.trim()}` : null, '', `![Reference image](https://github.com/${S.repo}/blob/main/${encPath(path)}?raw=true)`, '',
+      '_Sent from Keyword Desk._', '', `<!-- kwdesk ${enc(meta)} -->`].filter(x => x !== null).join('\n');
+    await gh(`${R()}/issues`, {method:'POST', body:{ title:'Keyword: ' + kw, body, labels:['keyword-request', 'pending-review'] }});
+    S.draft = { keyword:'', cat:'', subHint:'', note:'', img:null, busy:false, msg:{ kind:'ok', text:`Sent. “${kw}” is waiting for the approver.` } };
+    await refresh(true);
+  }catch(e){ fail('Couldn’t send the request: ' + e.message); }
+}
+
+// ================= requester: my requests =================
+function statusChip(r){
+  const map = { pending:'Waiting for review', approved:'Accepted, in next release', released:'Released', rejected:'Not added' };
+  return h('span', {class:'status st-' + r.status}, map[r.status] || r.status);
+}
+function viewMine(main){
+  const mine = S.requests.filter(r => r.requester === S.me && !r.direct).sort((a, b) => b.createdAt - a.createdAt);
+  main.append(h('h2', null, 'My requests'), h('p', {class:'lede'}, 'Every keyword you’ve asked for and what happened to it.'));
+  if (!mine.length){ main.append(h('div', {class:'panel empty'}, 'No requests yet. ', h('button', {class:'btn small', onclick(){ S.view = 'request'; render(true); }}, 'Request a keyword'))); return; }
+  main.append(h('div', {class:'panel scrollx'}, h('table', {class:'list'},
+    h('thead', null, h('tr', null, h('th', null, ''), h('th', null, 'Keyword'), h('th', null, 'Status'), h('th', null, 'Where it went'), h('th', null, 'Sent'))),
+    h('tbody', null, mine.map(r => h('tr', null,
+      h('td', {style:'width:64px'}, thumbFor(r)),
+      h('td', null, h('b', null, r.finalKeyword || r.keyword), r.finalKeyword && r.finalKeyword !== r.keyword ? h('div', {class:'note'}, 'Requested as “' + r.keyword + '”') : null),
+      h('td', null, statusChip(r)),
+      h('td', null, r.placement ? pathEl(finalPath({ parent: r.placement.parent, addSub: !!r.placement.newSub, newSub: r.placement.newSub || '' }, r.finalKeyword || r.keyword))
+        : r.status === 'rejected' ? h('span', {class:'note'}, r.rejectReason || 'No reason given') : h('span', {class:'note'}, '—')),
+      h('td', {class:'meta'}, fmtDate(r.createdAt))))))));
+}
+
+// ================= approver: review =================
+function viewApprove(main){
+  const pend = S.requests.filter(r => r.status === 'pending').sort((a, b) => a.createdAt - b.createdAt);
+  main.append(h('div', {class:'row', style:'justify-content:space-between;align-items:flex-end;margin-bottom:16px'},
+    h('div', null, h('h2', null, 'Requests to review'), h('p', {class:'lede', style:'margin:0'}, 'Check the image, fix the spelling if needed, and choose where the keyword goes. Accepted keywords wait in “Export & release” until you publish the next file.')),
+    h('button', {class:'btn', onclick(){ S.direct = S.direct ? null : { keyword:'', parent:[], newSub:'', addSub:false }; render(true); }}, S.direct ? 'Cancel' : 'Add a keyword yourself')));
+  if (!S.master){ main.append(h('div', {class:'alert warn', style:'margin-bottom:16px'}, 'No current.txt found in the repository. Upload it in “Keyword list”.')); }
+  if (S.direct) main.append(directAddCard());
+  if (!pend.length){ main.append(h('div', {class:'panel empty'}, 'Nothing waiting. New requests will show up here.')); return; }
+  for (const r of pend) main.append(reviewCard(r));
+}
+function dupNote(st, box){ box.replaceChildren(); const ex = existingPaths(st.keyword); if (ex.length) box.append(h('div', {class:'alert warn'}, 'Already in the list: ' + ex.map(joinPath).join('; '))); }
+function directAddCard(){
+  const st = S.direct, peek = h('div'), dup = h('div');
+  const refresh_ = () => { peek.replaceChildren(filePeek(st, st.keyword)); dupNote(st, dup); };
+  refresh_();
+  return h('div', {class:'req', style:'margin-bottom:14px'},
+    h('div', {class:'thumb ph'}, 'No image needed'),
+    h('div', {class:'stack'},
+      h('h3', null, 'Add a keyword directly'),
+      h('div', null, h('label', {class:'f'}, 'Keyword'), h('input', {type:'text', value:st.keyword, oninput(e){ st.keyword = e.target.value; refresh_(); }}), dup),
+      h('div', null, h('label', {class:'f'}, 'Place it under'), placementPicker(st, refresh_)),
+      peek,
+      h('div', {class:'row'}, h('button', {class:'btn primary', async onclick(e){
+        if (!st.keyword.trim() || !st.parent.length || (st.addSub && !st.newSub.trim())) return toast('Enter a keyword and choose where it goes.');
+        e.target.disabled = true;
+        try{
+          const kw = st.keyword.trim();
+          const meta = { v:1, keyword: kw, direct: true };
+          const dec = { keyword: kw, parent: st.parent, newSub: st.addSub ? st.newSub.trim() : null, by: S.me, at: Date.now() };
+          const body = `**Keyword:** ${kw}\n\nAdded directly by @${S.me} in Keyword Desk.\n\n<!-- kwdesk ${enc(meta)} -->\n\n<!-- kwdesk-decision ${enc(dec)} -->`;
+          await gh(`${R()}/issues`, {method:'POST', body:{ title:'Keyword: ' + kw, body, labels:['keyword-request', 'approved'] }});
+          S.direct = null; toast('Added to the next release.'); await refresh(true);
+        }catch(err){ e.target.disabled = false; toast('Couldn’t save: ' + err.message); }
+      }}, 'Accept into next release'))));
+}
+function reviewCard(r){
+  const st = S.decide[r.id] || (S.decide[r.id] = { keyword: r.keyword, parent: (r.cat && cats().includes(r.cat)) ? [r.cat] : [], newSub:'', addSub:false, reason:'', rejecting:false });
+  const peek = h('div'), dup = h('div');
+  const refresh_ = () => { peek.replaceChildren(filePeek(st, st.keyword, r.id)); dupNote(st, dup); };
+  refresh_();
+  const sugg = [r.cat, r.sub].filter(Boolean);
+  return h('article', {class:'req'},
+    h('div', null, thumbFor(r), h('div', {class:'note', style:'margin-top:6px'}, r.imageSize ? fmtSize(r.imageSize) : '', ' ', h('a', {href:r.url, target:'_blank', rel:'noopener'}, `Issue #${r.number}`))),
+    h('div', {class:'stack'},
+      h('div', null, h('h3', null, r.keyword), h('div', {class:'meta'}, `${r.requester}, ${fmtDate(r.createdAt)}`),
+        sugg.length ? h('div', {class:'meta'}, 'Suggested: ' + sugg.join(' > ')) : null,
+        r.note ? h('p', {style:'margin:6px 0 0'}, '“' + r.note + '”') : null),
+      h('div', null, h('label', {class:'f'}, 'Keyword as it will appear'), h('input', {type:'text', value:st.keyword, oninput(e){ st.keyword = e.target.value; refresh_(); }}), dup),
+      h('div', null, h('label', {class:'f'}, 'Place it under'), placementPicker(st, refresh_)),
+      peek,
+      st.rejecting
+        ? h('div', {class:'stack'}, h('input', {type:'text', placeholder:'Reason (shown to the requester)', value:st.reason, oninput(e){ st.reason = e.target.value; }}),
+            h('div', {class:'row'}, h('button', {class:'btn danger', onclick(e){ decide(r, 'rejected', e.target); }}, 'Reject request'), h('button', {class:'btn', onclick(){ st.rejecting = false; render(true); }}, 'Cancel')))
+        : h('div', {class:'row'}, h('button', {class:'btn primary', onclick(e){ decide(r, 'approved', e.target); }}, 'Accept'), h('button', {class:'btn danger', onclick(){ st.rejecting = true; render(true); }}, 'Reject…'))));
+}
+async function decide(r, status, btn){
+  const st = S.decide[r.id];
+  if (status === 'approved'){
+    if (!st.keyword.trim()) return toast('The keyword can’t be empty.');
+    if (!st.parent.length) return toast('Choose a main category first.');
+    if (st.addSub && !st.newSub.trim()) return toast('Name the new subcategory.');
+  }
+  if (btn) btn.disabled = true;
+  try{
+    if (status === 'approved'){
+      await setDecision(r, { keyword: st.keyword.trim(), parent: st.parent, newSub: st.addSub ? st.newSub.trim() : null, by: S.me, at: Date.now() }, ['approved'], 'open');
+      toast(`Accepted “${st.keyword.trim()}”.`);
+    } else {
+      await setDecision(r, { rejected: true, reason: st.reason.trim(), by: S.me, at: Date.now() }, ['rejected'], 'closed', 'not_planned');
+      await gh(`${R()}/issues/${r.number}/comments`, {method:'POST', body:{ body: 'Not added to the keyword list.' + (st.reason.trim() ? '\n\n> ' + st.reason.trim() : '') }});
+      toast('Request rejected.');
+    }
+    delete S.decide[r.id]; await refresh(true);
+  }catch(e){ if (btn) btn.disabled = false; toast('Couldn’t save: ' + e.message); }
+}
+
+// ================= approver: export & release =================
+function draftMessage(filename, placed){
+  const byCat = new Map();
+  for (const p of placed){ if (!p.added) continue; const k = p.path[0]; if (!byCat.has(k)) byCat.set(k, []); byCat.get(k).push(joinPath(p.path)); }
+  const order = cats();
+  const groups = [...byCat.entries()].sort((a, b) => order.indexOf(a[0]) - order.indexOf(b[0])).map(([, lines]) => lines.join('\n'));
+  return `${filename}\n\n\n${groups.join('\n\n')}`;
+}
+function viewRelease(main){
+  const staged = S.requests.filter(r => r.status === 'approved' && r.placement).sort((a, b) => (a.decidedAt || 0) - (b.decidedAt || 0));
+  main.append(h('h2', null, 'Export & release'), h('p', {class:'lede'}, 'Accepted keywords are added to a copy of the current list. Name the file, download it for Bridge, and publish it so requesters can download it too.'));
+  if (!S.master){ main.append(h('div', {class:'alert warn'}, 'Upload the current keyword file in “Keyword list” first.')); return; }
+  if (!staged.length){ main.append(h('div', {class:'panel empty'}, 'No accepted keywords waiting. Accept requests first, or add one yourself from “Requests”.')); return; }
+  const p = parseFilename(S.meta.filename) || { date: hijriToday(), base: S.config.file_name || 'KeywordsAdobeBrigde', version: S.meta.version || '1.0.0' };
+  const offset = S.config.hijri_offset_days || 0;
+  if (!S.rel || S.rel.forSha !== S.master.sha){
+    const v = bumpVersion(S.meta.version || p.version), dt = hijriToday(offset), base = S.meta.name || p.base;
+    S.rel = { forSha: S.master.sha, date: dt, base, version: v, filename: buildFilename(dt, base, v), custom:false, message:null, msgEdited:false, busy:false };
+  }
+  const RL = S.rel;
+  let res;
+  try { res = applyAdditions(S.master.text, staged.map(r => ({ id:r.id, parent:r.placement.parent, newSub:r.placement.newSub, keyword:r.finalKeyword || r.keyword }))); }
+  catch(e){ main.append(h('div', {class:'alert err'}, 'One accepted keyword can’t be placed: ' + e.message + '. Send it back to review and choose a new place.')); }
+  const placed = res ? res.placed : [], added = placed.filter(x => x.added);
+  if (!RL.msgEdited) RL.message = draftMessage(RL.filename, placed);
+  const msgIn = h('textarea', {rows:14, class:'path', style:'font-size:13px', oninput(e){ RL.message = e.target.value; RL.msgEdited = true; }}, RL.message);
+  const fnIn = h('input', {type:'text', value:RL.filename, class:'path', oninput(e){ RL.filename = e.target.value; RL.custom = true; if (!RL.msgEdited){ RL.message = draftMessage(RL.filename, placed); msgIn.value = RL.message; } }});
+  const syncName = () => { if (!RL.custom){ RL.filename = buildFilename(RL.date, RL.base, RL.version); fnIn.value = RL.filename; if (!RL.msgEdited){ RL.message = draftMessage(RL.filename, placed); msgIn.value = RL.message; } } };
+
+  const list = h('div', {class:'panel'}, h('h3', {style:'margin:0 0 10px;font-size:16px'}, `${added.length} keyword${added.length === 1 ? '' : 's'} to add`),
+    h('table', {class:'list'}, h('tbody', null, staged.map((r, i) => { const pl = placed[i]; return h('tr', null,
+      h('td', null, pl ? pathEl(pl.path) : r.keyword, pl && !pl.added ? h('div', {class:'note', style:'color:var(--warn)'}, 'Already in the list; it will be skipped') : null,
+        h('div', {class:'note'}, r.direct ? 'Added by ' + (r.dec && r.dec.by || 'approver') : 'Requested by ' + r.requester)),
+      h('td', {style:'text-align:right;white-space:nowrap'}, h('button', {class:'btn small', async onclick(e){
+        e.target.disabled = true;
+        try{
+          if (r.direct) await setDecision(r, { rejected:true, reason:'Removed before release', by:S.me, at:Date.now() }, ['rejected'], 'closed', 'not_planned');
+          else await setDecision(r, null, ['pending-review'], 'open');
+          toast(r.direct ? 'Removed.' : 'Sent back to review.'); await refresh(true);
+        }catch(err){ e.target.disabled = false; toast('Couldn’t update: ' + err.message); }
+      }}, r.direct ? 'Remove' : 'Back to review'))); }))));
+
+  const form = h('div', {class:'panel stack'},
+    h('h3', {style:'margin:0;font-size:16px'}, 'File name and version'),
+    h('div', {class:'grid2'},
+      h('div', null, h('label', {class:'f'}, 'Date ', h('small', null, '(Hijri, editable)')), h('input', {type:'text', value:RL.date, oninput(e){ RL.date = e.target.value.trim(); syncName(); }})),
+      h('div', null, h('label', {class:'f'}, 'Version ', h('small', null, `(was ${S.meta.version || p.version})`)), h('input', {type:'text', value:RL.version, oninput(e){ RL.version = e.target.value.trim(); syncName(); }}))),
+    h('div', null, h('label', {class:'f'}, 'Name'), h('input', {type:'text', value:RL.base, oninput(e){ RL.base = e.target.value.trim(); syncName(); }})),
+    h('div', null, h('label', {class:'f'}, 'File name ', h('small', null, RL.custom ? '(edited by hand) ' : '(built from the fields above) '),
+      RL.custom ? h('button', {class:'btn small', onclick(){ RL.custom = false; syncName(); render(true); }}, 'Rebuild from fields') : null), fnIn),
+    h('div', {class:'row'},
+      h('button', {class:'btn', disabled: !res, onclick(){ localDownload(RL.filename, res.text); }}, 'Download file'),
+      h('button', {class:'btn primary', disabled: !res || RL.busy || !added.length, onclick(){ publishRelease(res, staged, added); }}, RL.busy ? 'Publishing…' : 'Publish release')),
+    h('p', {class:'note', style:'margin:0'}, 'Publishing saves the file to GitHub, makes it the new current list, and puts it in everyone’s download list.'));
+  const msg = h('div', {class:'panel stack'},
+    h('div', {class:'row', style:'justify-content:space-between'}, h('h3', {style:'margin:0;font-size:16px'}, 'Announcement message'),
+      h('div', {class:'row'}, RL.msgEdited ? h('button', {class:'btn small', onclick(){ RL.msgEdited = false; render(true); }}, 'Redraft') : null,
+        h('button', {class:'btn small', onclick(){ copy(msgIn.value); }}, 'Copy message'))),
+    msgIn);
+  main.append(h('div', {class:'cols'}, h('div', {class:'stack'}, list, form), msg));
+}
+async function publishRelease(res, staged, added){
+  const RL = S.rel;
+  if (!/\.txt$/i.test(RL.filename)) return toast('The file name should end in .txt');
+  if (S.releases.some(x => x.filename === RL.filename) && !confirm(`A release named ${RL.filename} already exists. Replace it?`)) return;
+  RL.busy = true; render(true);
+  try{
+    const latest = await getFile('current.txt');
+    if (latest && latest.sha !== S.master.sha){ RL.busy = false; toast('The list changed on GitHub since you loaded it. Refreshing; check and publish again.'); return refresh(true); }
+    await putText('releases/' + RL.filename, res.text, `Release ${RL.filename}`);
+    await putFile('current.txt', textToB64(res.text), `Update keyword list to ${RL.filename}`, S.master.sha);
+    await putText('release.json', JSON.stringify({ filename: RL.filename, date: RL.date, name: RL.base, version: RL.version }, null, 2) + '\n', `Release ${RL.filename}`);
+    const rec = { filename: RL.filename, version: RL.version, date: RL.date, message: RL.message, additions: added.map(p => ({ path: p.path })), count: added.length, createdAt: Date.now(), by: S.me };
+    const relsFile = await getFile('releases.json'); let rels = []; try { rels = relsFile ? JSON.parse(relsFile.text) : []; } catch(e){}
+    rels = [rec, ...rels.filter(x => x.filename !== RL.filename)];
+    await putText('releases.json', JSON.stringify(rels, null, 2) + '\n', `Release ${RL.filename}`);
+    for (const r of staged){
+      const pl = res.placed.find(p => p.id === r.id);
+      try{
+        await setDecision(r, { ...r.dec, releasedAs: RL.filename }, ['released'], 'closed', 'completed');
+        await gh(`${R()}/issues/${r.number}/comments`, {method:'POST', body:{ body: `Released in **${RL.filename}** as \`${pl ? joinPath(pl.path) : r.keyword}\`.` }});
+      }catch(e){ console.warn(e); }
+    }
+    toast(`Published ${RL.filename}.`);
+    S.rel = null; S.view = 'history'; await refresh(true);
+  }catch(e){ RL.busy = false; toast('Couldn’t publish: ' + e.message); render(true); }
+}
+async function copy(text){
+  try { await navigator.clipboard.writeText(text); toast('Message copied.'); }
+  catch(e){ const t = h('textarea', {style:'position:fixed;opacity:0'}, text); document.body.append(t); t.select(); try { document.execCommand('copy'); toast('Message copied.'); } catch(_){ toast('Select the text and copy it manually.'); } t.remove(); }
+}
+
+// ================= approver: keyword list =================
+function viewList(main){
+  const f = masterFile();
+  main.append(h('h2', null, 'Keyword list'), h('p', {class:'lede'}, 'The current list everyone works from. Search it, download it, or replace it with a file you edited by hand.'));
+  const importIn = h('input', {type:'file', accept:'.txt,text/plain', class:'hidden', async onchange(e){
+    const file = e.target.files[0]; e.target.value = ''; if (!file) return;
+    const text = await file.text(), pf = parseFile(text), c = categories(pf.lines);
+    if (!c.length) return toast('That file has no main categories (lines like “01 Event”). Nothing was changed.');
+    if (!confirm(`Replace the current list with ${file.name}? It has ${c.length} main categories.`)) return;
+    const m = parseFilename(file.name);
+    try{
+      await putFile('current.txt', textToB64(text), `Replace keyword list with ${file.name}`, S.master && S.master.sha);
+      await putText('release.json', JSON.stringify({ filename: file.name, date: m ? m.date : '', name: m ? m.base : (S.meta.name || 'Keywords'), version: m ? m.version : (S.meta.version || '1.0.0') }, null, 2) + '\n', 'Update list details');
+      toast('List replaced.'); await refresh(true);
+    }catch(err){ toast('Couldn’t save: ' + err.message); }
+  }});
+  main.append(h('div', {class:'row', style:'margin-bottom:18px'},
+    f ? h('button', {class:'btn', onclick(){ localDownload(S.master.filename, S.master.text); }}, 'Download current file') : null,
+    h('button', {class:'btn', onclick(){ importIn.click(); }}, f ? 'Replace with a .txt file…' : 'Upload your keyword .txt file'), importIn));
+  if (!f){ main.append(h('div', {class:'panel empty'}, 'No list loaded yet.')); return; }
+  const L = f.lines;
+  main.append(h('div', {class:'catgrid', style:'margin-bottom:20px'}, categories(L).map(c => {
+    const i = findPath(L, [c]), end = subtreeEnd(L, i); let n = 0; for (let k = i + 1; k < end; k++) if (L[k].depth >= 0) n++;
+    const subs = childIdx(L, i).filter(k => childIdx(L, k).length).length;
+    return h('div', {class:'cat'}, h('b', null, c), h('span', null, `${n} keywords${subs ? `, ${subs} subcategories` : ''}`)); })));
+  const results = h('div');
+  const run = () => {
+    results.replaceChildren();
+    const q = norm(S.search); if (q.length < 2){ results.append(h('p', {class:'note'}, 'Type at least two letters to search.')); return; }
+    const hits = []; L.forEach((l, i) => { if (l.depth >= 0 && norm(l.name).includes(q)) hits.push(i); });
+    results.append(h('p', {class:'note'}, `${hits.length} match${hits.length === 1 ? '' : 'es'}`),
+      h('div', {class:'panel'}, h('table', {class:'list'}, h('tbody', null, hits.slice(0, 200).map(i => h('tr', null, h('td', null, pathEl(pathOf(L, i))), h('td', {class:'meta', style:'text-align:right'}, 'line ' + (i + 1))))))));
+  };
+  main.append(h('input', {type:'text', placeholder:'Search keywords', value:S.search, 'aria-label':'Search keywords', oninput(e){ S.search = e.target.value; run(); }, style:'margin-bottom:12px;max-width:420px'}), results);
+  run();
+}
+
+// ================= released files =================
+function viewHistory(main){
+  const isReq = role() === 'requester';
+  main.append(h('h2', null, isReq ? 'Download the keyword list' : 'Released files'),
+    h('p', {class:'lede'}, isReq ? 'The newest file is at the top. Import it into Adobe Bridge from the Keywords panel menu.' : 'Every published version, newest first.'));
+  if (S.releases.length) safeLS(ls => ls.setItem('kd-seen', S.releases[0].filename));
+  const box = h('div', {class:'panel'});
+  if (S.master) box.append(h('div', {class:'rel'},
+    h('div', null, h('div', {class:'fn'}, S.master.filename, h('span', {class:'newtag'}, 'Current')), h('div', {class:'meta'}, 'The list everyone should be using right now.')),
+    h('div', {class:'row', style:'align-items:flex-start;justify-content:flex-end'}, h('button', {class:'btn small primary', onclick(){ localDownload(S.master.filename, S.master.text); }}, 'Download'))));
+  if (!S.releases.length) box.append(h('p', {class:'note', style:'margin:12px 0 0'}, 'No releases published from Keyword Desk yet.'));
+  S.releases.forEach(r => {
+    const more = h('div', {class:'hidden', style:'margin-top:8px'}, h('div', {class:'filepeek', style:'white-space:pre-wrap;padding:10px 12px'}, r.message || ''));
+    box.append(h('div', {class:'rel'},
+      h('div', null, h('div', {class:'fn'}, r.filename),
+        h('div', {class:'meta'}, `${fmtDate(r.createdAt)}, ${r.count} new keyword${r.count === 1 ? '' : 's'}${r.by ? ', released by ' + r.by : ''}`),
+        h('div', {style:'margin-top:6px'}, (r.additions || []).slice(0, 6).map(a => h('span', {class:'chip'}, a.path[a.path.length - 1])), (r.additions || []).length > 6 ? h('span', {class:'note'}, ` and ${r.additions.length - 6} more`) : null),
+        more),
+      h('div', {class:'row', style:'align-items:flex-start;justify-content:flex-end'},
+        h('button', {class:'btn small', onclick(e){ more.classList.toggle('hidden'); e.target.textContent = more.classList.contains('hidden') ? 'Show message' : 'Hide message'; }}, 'Show message'),
+        h('button', {class:'btn small', onclick(){ copy(r.message || ''); }}, 'Copy message'),
+        h('button', {class:'btn small', async onclick(e){
+          e.target.disabled = true;
+          try { const f = await getFile('releases/' + r.filename); if (!f) toast('That file is missing from the repository.'); else localDownload(r.filename, f.text); }
+          catch(err){ toast('Couldn’t load the file: ' + err.message); }
+          e.target.disabled = false;
+        }}, 'Download'))));
+  });
+  main.append(box);
+}
+
+// ================= boot =================
+async function boot(){
+  render(true);
+  if (S.token){
+    try { await signIn(S.token, S.repo); }
+    catch(e){ S.me = null; render(true); toast(e.message); }
+  }
+  setInterval(() => { if (S.me && document.visibilityState === 'visible') refresh(true); }, 90000);
+}
+boot();
+</script>
+</body></html>
