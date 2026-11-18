@@ -291,7 +291,7 @@ function issueToReq(i){
   const labels = (i.labels || []).map(l => typeof l === 'string' ? l : l.name);
   const status = labels.includes('released') ? 'released' : labels.includes('rejected') ? 'rejected' : labels.includes('approved') ? 'approved' : 'pending';
   return { id: i.number, number: i.number, url: i.html_url, body: i.body || '', keyword: meta.keyword || i.title.replace(/^Keyword:\s*/i, ''),
-    cat: meta.cat || '', sub: meta.sub || '', note: meta.note || '', image: meta.image || null, imageSize: meta.imageSize || 0, direct: !!meta.direct,
+    cat: meta.cat || '', sub: meta.sub || '', note: meta.note || '', image: meta.image || null, thumb: meta.thumb || null, imageSize: meta.imageSize || 0, direct: !!meta.direct,
     requester: meta.by || (dec && dec.by) || (i.user && i.user.login), createdAt: Date.parse(i.created_at), status, dec,
     placement: dec && dec.parent ? { parent: dec.parent, newSub: dec.newSub || null } : null,
     finalKeyword: dec && dec.keyword, decidedAt: dec && dec.at, rejectReason: dec && dec.reason, releasedAs: dec && dec.releasedAs };
@@ -307,7 +307,8 @@ async function loadIssues(){
 }
 async function setDecision(r, dec, labels, state, reason){
   const body = r.body.replace(DEC_RE, '') + (dec ? `\n\n<!-- kwdesk-decision ${enc(dec)} -->` : '');
-  await gh(`${R()}/issues/${r.number}`, {method:'PATCH', body:{ body, labels:['keyword-request', ...labels], state, ...(reason ? {state_reason: reason} : {}) }});
+  const issue = await gh(`${R()}/issues/${r.number}`, {method:'PATCH', body:{ body, labels:['keyword-request', ...labels], state, ...(reason ? {state_reason: reason} : {}) }});
+  if (issue && issue.number){ const nr = issueToReq(issue); S.requests = S.requests.map(x => x.number === nr.number ? nr : x); }
 }
 
 // ================= state =================
@@ -320,15 +321,22 @@ const S = {
 };
 const role = () => (S.isApprover && !S.previewRequester) ? 'approver' : 'requester';
 
-async function loadAll(){
-  const [cur, meta, cfg, rels] = await Promise.all([getFile('current.txt'), getFile('release.json'), getFile('keyword-config.json'), getFile('releases.json')]);
+function applyLoad(d){
+  const f = d.files || {}, cur = f['current.txt'], meta = f['release.json'], cfg = f['keyword-config.json'], rels = f['releases.json'];
   S.master = cur ? { text: cur.text, sha: cur.sha } : null;
   try { S.meta = meta ? JSON.parse(meta.text) : {}; } catch(e){ S.meta = {}; }
   try { S.config = cfg ? JSON.parse(cfg.text) : {}; } catch(e){ S.config = {}; }
   try { S.releases = rels ? JSON.parse(rels.text) : []; } catch(e){ S.releases = []; }
   if (S.master) S.master.filename = S.meta.filename || 'current.txt';
-  await loadIssues();
+  S.requests = (d.issues || []).map(issueToReq);
+  S.repo = d.repo || S.repo; S.isApprover = d.role === 'approver';
   S.loaded = true;
+}
+async function loadAll(){
+  const d = await gh('', {op:'load', method:'POST'});
+  applyLoad(d);
+  safeLS(ls => ls.setItem('kd-cache', JSON.stringify(d)));
+  return d;
 }
 async function refresh(quiet){
   try { await loadAll(); S.loadError = null; } catch(e){ S.loadError = e.message; if (!quiet) toast('Couldn’t refresh: ' + e.message); }
@@ -393,17 +401,25 @@ function viewLogin(main){
 async function signIn(name, pass){
   if (!name) throw new Error('Enter your name.');
   if (!pass) throw new Error('Enter the password.');
-  S.pass = pass;
-  let session;
-  try { session = await gh('', {op:'session', method:'POST'}); }
-  catch(e){ S.pass = ''; throw new Error(e.status === 401 ? 'That password isn’t right.' : 'Couldn’t sign in: ' + e.message); }
+  const prevPass = safeLS(ls => ls.getItem('kd-pass'));
+  S.pass = pass; S.name = name;
+  let cached = null;
+  if (prevPass === pass) { try { cached = JSON.parse(safeLS(ls => ls.getItem('kd-cache')) || 'null'); } catch(e){} }
+  if (cached){ S.me = name; applyLoad(cached); render(true); }   // show last known data instantly
+  try { await loadAll(); }
+  catch(e){
+    if (e.status === 401){
+      S.pass = ''; S.me = null; S.loaded = false; safeLS(ls => { ls.removeItem('kd-pass'); ls.removeItem('kd-cache'); });
+      if (cached){ render(true); toast('The password has changed. Sign in again.'); return; }
+      throw new Error('That password isn’t right.');
+    }
+    if (!cached) { S.pass = ''; throw new Error('Couldn’t sign in: ' + e.message); }
+    toast('Showing saved data; couldn’t reach the server.');
+  }
   safeLS(ls => { ls.setItem('kd-pass', pass); ls.setItem('kd-name', name); });
-  S.name = name; S.me = name; S.repo = session.repo; S.isApprover = session.role === 'approver';
-  S.loaded = false; render(true);
-  await loadAll();
-  render(true);
+  S.me = name; render(true);
 }
-function signOut(){ safeLS(ls => ls.removeItem('kd-pass')); Object.assign(S, { pass:'', me:null, loaded:false, requests:[], releases:[], master:null, view:null, rel:null, decide:{}, isApprover:false, previewRequester:false }); render(true); }
+function signOut(){ safeLS(ls => { ls.removeItem('kd-pass'); ls.removeItem('kd-cache'); }); Object.assign(S, { pass:'', me:null, loaded:false, requests:[], releases:[], master:null, view:null, rel:null, decide:{}, isApprover:false, previewRequester:false }); render(true); }
 
 // ================= image handling =================
 async function loadBitmap(file){
@@ -429,17 +445,33 @@ async function compressImage(file){
   if (!blob || blob.size > MAX) throw new Error('Couldn’t bring this image under 1 MB.');
   return { blob, w, h: hh, orig: file.size, changed: true };
 }
-async function imageURL(req){
-  if (!req.image) return null;
-  if (!S.imgCache[req.image]) S.imgCache[req.image] = gh(`${R()}/contents/${encPath(req.image)}`, {accept:'application/vnd.github.raw+json', raw:'blob'}).then(b => URL.createObjectURL(b));
-  return S.imgCache[req.image];
+// Images never change once uploaded, so keep them in the browser's cache.
+async function repoImage(path){
+  if (!path) return null;
+  if (!S.imgCache[path]) S.imgCache[path] = (async () => {
+    const key = new Request(location.origin + '/__kd-img/' + encPath(path));
+    let cache = null;
+    try { cache = await caches.open('kd-images'); const hit = await cache.match(key); if (hit) return URL.createObjectURL(await hit.blob()); } catch(e){}
+    const blob = await gh(`/contents/${encPath(path)}`, {accept:'application/vnd.github.raw+json', raw:'blob'});
+    try { if (cache) await cache.put(key, new Response(blob)); } catch(e){}
+    return URL.createObjectURL(blob);
+  })().catch(e => { delete S.imgCache[path]; throw e; });
+  return S.imgCache[path];
 }
+const imageURL = req => repoImage(req.image);
 function thumbFor(req){
   if (!req.image) return h('div', {class:'thumb ph'}, req.direct ? 'Added by approver' : 'No image');
   const btn = h('button', {class:'thumb', 'aria-label':'Enlarge reference image for ' + req.keyword});
   btn.style.backgroundSize = 'cover'; btn.style.backgroundPosition = 'center';
-  imageURL(req).then(u => { btn.style.backgroundImage = `url("${u}")`; btn.onclick = () => zoom(u, req.keyword); }).catch(() => { btn.textContent = 'Image unavailable'; });
+  repoImage(req.thumb || req.image).then(u => { btn.style.backgroundImage = `url("${u}")`; }).catch(() => { btn.textContent = 'Image unavailable'; });
+  btn.onclick = async () => { btn.style.cursor = 'progress'; try { zoom(await repoImage(req.image), req.keyword); } catch(e){ toast('Couldn’t load the image.'); } btn.style.cursor = ''; };
   return btn;
+}
+async function makeThumb(blob){
+  const bmp = await loadBitmap(blob), max = 360, sc = Math.min(1, max / Math.max(bmp.width, bmp.height));
+  const c = document.createElement('canvas'); c.width = Math.round(bmp.width * sc); c.height = Math.round(bmp.height * sc);
+  const ctx = c.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height); ctx.drawImage(bmp, 0, 0, c.width, c.height);
+  return new Promise(r => c.toBlob(r, 'image/jpeg', 0.8));
 }
 function zoom(url, cap){ $('#zoomimg').src = url; $('#zoomcap').textContent = cap; $('#zoom').showModal(); }
 $('#zoomclose').onclick = () => $('#zoom').close();
@@ -578,14 +610,18 @@ async function submitRequest(){
     const stamp = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14);
     const path = `reference-images/${stamp}-${slug(kw)}.jpg`;
     const bytes = new Uint8Array(await d.img.blob.arrayBuffer());
+    const thumbPath = path.replace('reference-images/', 'reference-images/thumbs/');
+    let thumbBlob = null; try { thumbBlob = await makeThumb(d.img.blob); } catch(e){}
     await putFile(path, bytesToB64(bytes), `Reference image: ${kw}`);
-    const meta = { v:1, keyword: kw, cat: d.cat, sub: d.subHint.trim(), note: d.note.trim(), image: path, imageSize: bytes.length, by: S.me };
+    if (thumbBlob){ try { await putFile(thumbPath, bytesToB64(new Uint8Array(await thumbBlob.arrayBuffer())), `Thumbnail: ${kw}`); } catch(e){ thumbBlob = null; } }
+    const meta = { v:1, keyword: kw, cat: d.cat, sub: d.subHint.trim(), note: d.note.trim(), image: path, thumb: thumbBlob ? thumbPath : null, imageSize: bytes.length, by: S.me };
     const body = [`**Keyword:** ${kw}`, `**Requested by:** ${S.me}`, `**Suggested category:** ${d.cat || 'Not sure'}`, d.subHint.trim() ? `**Suggested subcategory:** ${d.subHint.trim()}` : null,
       d.note.trim() ? `**Note:** ${d.note.trim()}` : null, '', `![Reference image](https://github.com/${S.repo}/blob/main/${encPath(path)}?raw=true)`, '',
       '_Sent from Keyword Desk._', '', `<!-- kwdesk ${enc(meta)} -->`].filter(x => x !== null).join('\n');
-    await gh(`${R()}/issues`, {method:'POST', body:{ title:'Keyword: ' + kw, body, labels:['keyword-request', 'pending-review'] }});
+    const issue = await gh(`${R()}/issues`, {method:'POST', body:{ title:'Keyword: ' + kw, body, labels:['keyword-request', 'pending-review'] }});
+    S.requests = [issueToReq(issue), ...S.requests];
     S.draft = { keyword:'', cat:'', subHint:'', note:'', img:null, busy:false, msg:{ kind:'ok', text:`Sent. “${kw}” is waiting for the approver.` } };
-    await refresh(true);
+    render(true); refresh(true);
   }catch(e){ fail('Couldn’t send the request: ' + e.message); }
 }
 
@@ -640,8 +676,9 @@ function directAddCard(){
           const meta = { v:1, keyword: kw, direct: true, by: S.me };
           const dec = { keyword: kw, parent: st.parent, newSub: st.addSub ? st.newSub.trim() : null, by: S.me, at: Date.now() };
           const body = `**Keyword:** ${kw}\n\nAdded directly by ${S.me} in Keyword Desk.\n\n<!-- kwdesk ${enc(meta)} -->\n\n<!-- kwdesk-decision ${enc(dec)} -->`;
-          await gh(`${R()}/issues`, {method:'POST', body:{ title:'Keyword: ' + kw, body, labels:['keyword-request', 'approved'] }});
-          S.direct = null; toast('Added to the next release.'); await refresh(true);
+          const issue = await gh(`${R()}/issues`, {method:'POST', body:{ title:'Keyword: ' + kw, body, labels:['keyword-request', 'approved'] }});
+          S.requests = [issueToReq(issue), ...S.requests];
+          S.direct = null; toast('Added to the next release.'); render(true);
         }catch(err){ e.target.disabled = false; toast('Couldn’t save: ' + err.message); }
       }}, 'Accept into next release'))));
 }
@@ -679,10 +716,10 @@ async function decide(r, status, btn){
       toast(`Accepted “${st.keyword.trim()}”.`);
     } else {
       await setDecision(r, { rejected: true, reason: st.reason.trim(), by: S.me, at: Date.now() }, ['rejected'], 'closed', 'not_planned');
-      await gh(`${R()}/issues/${r.number}/comments`, {method:'POST', body:{ body: 'Not added to the keyword list.' + (st.reason.trim() ? '\n\n> ' + st.reason.trim() : '') }});
+      gh(`${R()}/issues/${r.number}/comments`, {method:'POST', body:{ body: 'Not added to the keyword list.' + (st.reason.trim() ? '\n\n> ' + st.reason.trim() : '') }}).catch(() => {});
       toast('Request rejected.');
     }
-    delete S.decide[r.id]; await refresh(true);
+    delete S.decide[r.id]; render(true);
   }catch(e){ if (btn) btn.disabled = false; toast('Couldn’t save: ' + e.message); }
 }
 
@@ -724,7 +761,7 @@ function viewRelease(main){
         try{
           if (r.direct) await setDecision(r, { rejected:true, reason:'Removed before release', by:S.me, at:Date.now() }, ['rejected'], 'closed', 'not_planned');
           else await setDecision(r, null, ['pending-review'], 'open');
-          toast(r.direct ? 'Removed.' : 'Sent back to review.'); await refresh(true);
+          toast(r.direct ? 'Removed.' : 'Sent back to review.'); render(true);
         }catch(err){ e.target.disabled = false; toast('Couldn’t update: ' + err.message); }
       }}, r.direct ? 'Remove' : 'Back to review'))); }))));
 
@@ -762,13 +799,15 @@ async function publishRelease(res, staged, added){
     const relsFile = await getFile('releases.json'); let rels = []; try { rels = relsFile ? JSON.parse(relsFile.text) : []; } catch(e){}
     rels = [rec, ...rels.filter(x => x.filename !== RL.filename)];
     await putText('releases.json', JSON.stringify(rels, null, 2) + '\n', `Release ${RL.filename}`);
-    for (const r of staged){
+    await Promise.all(staged.map(async r => {
       const pl = res.placed.find(p => p.id === r.id);
       try{
-        await setDecision(r, { ...r.dec, releasedAs: RL.filename }, ['released'], 'closed', 'completed');
-        await gh(`${R()}/issues/${r.number}/comments`, {method:'POST', body:{ body: `Released in **${RL.filename}** as \`${pl ? joinPath(pl.path) : r.keyword}\`.` }});
+        await Promise.all([
+          setDecision(r, { ...r.dec, releasedAs: RL.filename }, ['released'], 'closed', 'completed'),
+          gh(`${R()}/issues/${r.number}/comments`, {method:'POST', body:{ body: `Released in **${RL.filename}** as \`${pl ? joinPath(pl.path) : r.keyword}\`.` }}),
+        ]);
       }catch(e){ console.warn(e); }
-    }
+    }));
     toast(`Published ${RL.filename}.`);
     S.rel = null; S.view = 'history'; await refresh(true);
   }catch(e){ RL.busy = false; toast('Couldn’t publish: ' + e.message); render(true); }
