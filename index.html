@@ -222,6 +222,7 @@ const fmtSize = b => b >= 1048576 ? (b/1048576).toFixed(2) + ' MB' : Math.round(
 const fmtDate = t => t ? new Date(t).toLocaleString(undefined, {day:'numeric', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit'}) : '';
 function toast(msg){ const t = h('div', {class:'toast', role:'status'}, msg); document.body.append(t); setTimeout(() => t.remove(), 3600); }
 function pathEl(parts){ return h('span', {class:'path'}, parts.map((p, i) => [i ? h('span', {class:'sep'}, '>') : null, p])); }
+const sameName = (a, b) => !!a && !!b && a.trim().toLowerCase() === b.trim().toLowerCase();
 const joinPath = parts => parts.join(' > ');
 function hijriToday(offset){
   try{
@@ -251,13 +252,11 @@ function localDownload(filename, text){
 }
 
 // ================= GitHub API =================
-const DEFAULT_REPO = 'husainpanvelwala-pixel/Brigde-Keywords';
-const API = 'https://api.github.com';
 const encPath = p => p.split('/').map(encodeURIComponent).join('/');
-async function gh(path, {method = 'GET', body, accept, raw} = {}){
-  const res = await fetch(API + path, { method, cache:'no-store',
-    headers: { Authorization: 'Bearer ' + S.token, Accept: accept || 'application/vnd.github+json', 'X-GitHub-Api-Version':'2022-11-28', ...(body ? {'Content-Type':'application/json'} : {}) },
-    body: body ? JSON.stringify(body) : undefined });
+async function gh(path, {method = 'GET', body, accept, raw, op} = {}){
+  const res = await fetch('/api/gh', { method:'POST', cache:'no-store',
+    headers: { 'Content-Type':'application/json', 'x-kd-pass': S.pass },
+    body: JSON.stringify({ op, method, path, body, accept }) });
   if (!res.ok){
     let msg = res.statusText; try { msg = (await res.json()).message || msg; } catch(e){}
     const err = new Error(`${res.status} ${msg}`); err.status = res.status; throw err;
@@ -266,7 +265,7 @@ async function gh(path, {method = 'GET', body, accept, raw} = {}){
   if (raw === 'text') return res.text();
   return res.status === 204 ? null : res.json();
 }
-const R = () => '/repos/' + S.repo;
+const R = () => '';
 async function getFile(path){
   try { const j = await gh(`${R()}/contents/${encPath(path)}`); return { text: j.content ? b64ToText(j.content) : await gh(`${R()}/contents/${encPath(path)}`, {accept:'application/vnd.github.raw+json', raw:'text'}), sha: j.sha }; }
   catch(e){ if (e.status === 404) return null; throw e; }
@@ -293,7 +292,7 @@ function issueToReq(i){
   const status = labels.includes('released') ? 'released' : labels.includes('rejected') ? 'rejected' : labels.includes('approved') ? 'approved' : 'pending';
   return { id: i.number, number: i.number, url: i.html_url, body: i.body || '', keyword: meta.keyword || i.title.replace(/^Keyword:\s*/i, ''),
     cat: meta.cat || '', sub: meta.sub || '', note: meta.note || '', image: meta.image || null, imageSize: meta.imageSize || 0, direct: !!meta.direct,
-    requester: i.user && i.user.login, createdAt: Date.parse(i.created_at), status, dec,
+    requester: meta.by || (dec && dec.by) || (i.user && i.user.login), createdAt: Date.parse(i.created_at), status, dec,
     placement: dec && dec.parent ? { parent: dec.parent, newSub: dec.newSub || null } : null,
     finalKeyword: dec && dec.keyword, decidedAt: dec && dec.at, rejectReason: dec && dec.reason, releasedAs: dec && dec.releasedAs };
 }
@@ -313,7 +312,7 @@ async function setDecision(r, dec, labels, state, reason){
 
 // ================= state =================
 const S = {
-  token: safeLS(ls => ls.getItem('kd-token')) || '', repo: safeLS(ls => ls.getItem('kd-repo')) || DEFAULT_REPO,
+  pass: safeLS(ls => ls.getItem('kd-pass')) || '', name: safeLS(ls => ls.getItem('kd-name')) || '', repo: '',
   me: null, isApprover: false, previewRequester: false, view: null,
   master: null, meta: {}, config: {}, releases: [], requests: [], imgCache: {}, loaded: false, loadError: null,
   draft: { keyword:'', cat:'', subHint:'', note:'', img:null, busy:false, msg:null },
@@ -366,7 +365,7 @@ function renderChrome(){
   const unseen = S.releases.length && S.releases[0].filename !== safeLS(ls => ls.getItem('kd-seen'));
   const tabs = role() === 'approver'
     ? [['requests', 'Requests', pend, pend > 0], ['release', 'Export & release', staged, staged > 0], ['list', 'Keyword list'], ['history', 'Released files', S.releases.length]]
-    : [['request', 'Request a keyword'], ['mine', 'My requests', S.requests.filter(x => x.requester === S.me).length], ['downloads', 'Download list', unseen ? 'new' : null, unseen]];
+    : [['request', 'Request a keyword'], ['mine', 'My requests', S.requests.filter(x => sameName(x.requester, S.me)).length], ['downloads', 'Download list', unseen ? 'new' : null, unseen]];
   if (!tabs.some(t => t[0] === S.view)) S.view = tabs[0][0];
   nav.replaceChildren(...tabs.map(([id, label, c, hot]) =>
     h('button', {'aria-current': S.view === id ? 'page' : false, onclick(){ S.view = id; render(true); window.scrollTo(0, 0); }}, label, c != null && c !== 0 ? h('span', {class:'count' + (hot ? ' hot' : '')}, c) : null)));
@@ -374,42 +373,37 @@ function renderChrome(){
 
 // ================= sign in =================
 function viewLogin(main){
-  const st = { token: S.token, repo: S.repo, busy: false, err: null };
+  const st = { name: S.name, pass: '' };
   const errBox = h('div');
   const btn = h('button', {class:'btn primary', async onclick(){
     errBox.replaceChildren(); btn.disabled = true; btn.textContent = 'Signing in…';
-    try { await signIn(st.token.trim(), st.repo.trim()); }
+    try { await signIn(st.name.trim(), st.pass); }
     catch(e){ errBox.append(h('div', {class:'alert err'}, e.message)); btn.disabled = false; btn.textContent = 'Sign in'; }
   }}, 'Sign in');
-  main.append(h('div', {style:'max-width:560px;margin:24px auto'},
+  const enter = e => { if (e.key === 'Enter') btn.click(); };
+  main.append(h('div', {style:'max-width:520px;margin:24px auto'},
     h('h2', null, 'Sign in'),
-    h('p', {class:'lede'}, 'Keyword Desk keeps everything in your GitHub repository. Sign in once with a GitHub access token; it stays saved in this browser.'),
+    h('p', {class:'lede'}, 'Use the team password you were given. You only need to do this once on each browser.'),
     h('div', {class:'panel stack'},
-      h('div', null, h('label', {class:'f', for:'tk'}, 'GitHub access token'),
-        h('input', {type:'password', id:'tk', value:st.token, placeholder:'ghp_…', autocomplete:'off', oninput(e){ st.token = e.target.value; }, onkeydown(e){ if (e.key === 'Enter') btn.click(); }}),
-        h('p', {class:'note'}, 'Don’t have one? ', h('a', {href:'https://github.com/settings/tokens/new?scopes=repo&description=Keyword%20Desk', target:'_blank', rel:'noopener'}, 'Create a token on GitHub'),
-          '. Tick the “repo” box, choose an expiry date, click “Generate token”, and paste it here.')),
-      h('div', null, h('label', {class:'f', for:'rp'}, 'Repository'), h('input', {type:'text', id:'rp', value:st.repo, oninput(e){ st.repo = e.target.value; }})),
+      h('div', null, h('label', {class:'f', for:'nm'}, 'Your name'), h('input', {type:'text', id:'nm', value:st.name, placeholder:'e.g. Husain', autocomplete:'name', oninput(e){ st.name = e.target.value; }, onkeydown: enter}),
+        h('p', {class:'note'}, 'Shown on your requests. Use the same name every time so “My requests” finds them.')),
+      h('div', null, h('label', {class:'f', for:'pw'}, 'Password'), h('input', {type:'password', id:'pw', autocomplete:'current-password', oninput(e){ st.pass = e.target.value; }, onkeydown: enter})),
       errBox, h('div', {class:'row'}, btn))));
 }
-async function signIn(token, repo){
-  if (!token) throw new Error('Paste your GitHub access token.');
-  if (!/^[\w.-]+\/[\w.-]+$/.test(repo)) throw new Error('Repository should look like owner/name.');
-  S.token = token; S.repo = repo;
-  let user, info;
-  try { user = await gh('/user'); }
-  catch(e){ throw new Error(e.status === 401 ? 'GitHub didn’t accept that token. Check you copied all of it and that it hasn’t expired.' : 'Couldn’t reach GitHub: ' + e.message); }
-  try { info = await gh(R()); }
-  catch(e){ throw new Error(e.status === 404 ? `Can’t see ${repo}. Ask the owner to add “${user.login}” as a collaborator, accept the email invitation, and check the token has the “repo” box ticked.` : e.message); }
-  if (!info.permissions || !info.permissions.push) throw new Error('Your account can view this repository but can’t add to it. Ask the owner for write access.');
-  safeLS(ls => { ls.setItem('kd-token', token); ls.setItem('kd-repo', repo); });
-  S.me = user.login; S.loaded = false; render(true);
+async function signIn(name, pass){
+  if (!name) throw new Error('Enter your name.');
+  if (!pass) throw new Error('Enter the password.');
+  S.pass = pass;
+  let session;
+  try { session = await gh('', {op:'session', method:'POST'}); }
+  catch(e){ S.pass = ''; throw new Error(e.status === 401 ? 'That password isn’t right.' : 'Couldn’t sign in: ' + e.message); }
+  safeLS(ls => { ls.setItem('kd-pass', pass); ls.setItem('kd-name', name); });
+  S.name = name; S.me = name; S.repo = session.repo; S.isApprover = session.role === 'approver';
+  S.loaded = false; render(true);
   await loadAll();
-  const approvers = (S.config.approvers || []).map(a => a.toLowerCase());
-  S.isApprover = approvers.length ? approvers.includes(S.me.toLowerCase()) : !!info.permissions.admin;
   render(true);
 }
-function signOut(){ safeLS(ls => ls.removeItem('kd-token')); Object.assign(S, { token:'', me:null, loaded:false, requests:[], releases:[], master:null, view:null, rel:null, decide:{} }); render(true); }
+function signOut(){ safeLS(ls => ls.removeItem('kd-pass')); Object.assign(S, { pass:'', me:null, loaded:false, requests:[], releases:[], master:null, view:null, rel:null, decide:{}, isApprover:false, previewRequester:false }); render(true); }
 
 // ================= image handling =================
 async function loadBitmap(file){
@@ -585,8 +579,8 @@ async function submitRequest(){
     const path = `reference-images/${stamp}-${slug(kw)}.jpg`;
     const bytes = new Uint8Array(await d.img.blob.arrayBuffer());
     await putFile(path, bytesToB64(bytes), `Reference image: ${kw}`);
-    const meta = { v:1, keyword: kw, cat: d.cat, sub: d.subHint.trim(), note: d.note.trim(), image: path, imageSize: bytes.length };
-    const body = [`**Keyword:** ${kw}`, `**Suggested category:** ${d.cat || 'Not sure'}`, d.subHint.trim() ? `**Suggested subcategory:** ${d.subHint.trim()}` : null,
+    const meta = { v:1, keyword: kw, cat: d.cat, sub: d.subHint.trim(), note: d.note.trim(), image: path, imageSize: bytes.length, by: S.me };
+    const body = [`**Keyword:** ${kw}`, `**Requested by:** ${S.me}`, `**Suggested category:** ${d.cat || 'Not sure'}`, d.subHint.trim() ? `**Suggested subcategory:** ${d.subHint.trim()}` : null,
       d.note.trim() ? `**Note:** ${d.note.trim()}` : null, '', `![Reference image](https://github.com/${S.repo}/blob/main/${encPath(path)}?raw=true)`, '',
       '_Sent from Keyword Desk._', '', `<!-- kwdesk ${enc(meta)} -->`].filter(x => x !== null).join('\n');
     await gh(`${R()}/issues`, {method:'POST', body:{ title:'Keyword: ' + kw, body, labels:['keyword-request', 'pending-review'] }});
@@ -601,7 +595,7 @@ function statusChip(r){
   return h('span', {class:'status st-' + r.status}, map[r.status] || r.status);
 }
 function viewMine(main){
-  const mine = S.requests.filter(r => r.requester === S.me && !r.direct).sort((a, b) => b.createdAt - a.createdAt);
+  const mine = S.requests.filter(r => sameName(r.requester, S.me) && !r.direct).sort((a, b) => b.createdAt - a.createdAt);
   main.append(h('h2', null, 'My requests'), h('p', {class:'lede'}, 'Every keyword you’ve asked for and what happened to it.'));
   if (!mine.length){ main.append(h('div', {class:'panel empty'}, 'No requests yet. ', h('button', {class:'btn small', onclick(){ S.view = 'request'; render(true); }}, 'Request a keyword'))); return; }
   main.append(h('div', {class:'panel scrollx'}, h('table', {class:'list'},
@@ -643,9 +637,9 @@ function directAddCard(){
         e.target.disabled = true;
         try{
           const kw = st.keyword.trim();
-          const meta = { v:1, keyword: kw, direct: true };
+          const meta = { v:1, keyword: kw, direct: true, by: S.me };
           const dec = { keyword: kw, parent: st.parent, newSub: st.addSub ? st.newSub.trim() : null, by: S.me, at: Date.now() };
-          const body = `**Keyword:** ${kw}\n\nAdded directly by @${S.me} in Keyword Desk.\n\n<!-- kwdesk ${enc(meta)} -->\n\n<!-- kwdesk-decision ${enc(dec)} -->`;
+          const body = `**Keyword:** ${kw}\n\nAdded directly by ${S.me} in Keyword Desk.\n\n<!-- kwdesk ${enc(meta)} -->\n\n<!-- kwdesk-decision ${enc(dec)} -->`;
           await gh(`${R()}/issues`, {method:'POST', body:{ title:'Keyword: ' + kw, body, labels:['keyword-request', 'approved'] }});
           S.direct = null; toast('Added to the next release.'); await refresh(true);
         }catch(err){ e.target.disabled = false; toast('Couldn’t save: ' + err.message); }
@@ -855,8 +849,8 @@ function viewHistory(main){
 // ================= boot =================
 async function boot(){
   render(true);
-  if (S.token){
-    try { await signIn(S.token, S.repo); }
+  if (S.pass && S.name){
+    try { await signIn(S.name, S.pass); }
     catch(e){ S.me = null; render(true); toast(e.message); }
   }
   setInterval(() => { if (S.me && document.visibilityState === 'visible') refresh(true); }, 90000);
